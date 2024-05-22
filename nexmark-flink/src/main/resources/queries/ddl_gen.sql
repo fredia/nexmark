@@ -33,8 +33,7 @@ CREATE TABLE datagen (
             WHEN event_type = 0 THEN person.dateTime
             WHEN event_type = 1 THEN auction.dateTime
             ELSE bid.dateTime
-        END,
-    WATERMARK FOR dateTime AS dateTime - INTERVAL '4' SECOND
+        END
 ) WITH (
     'connector' = 'nexmark',
     'first-event.rate' = '${TPS}',

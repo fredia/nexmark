@@ -40,6 +40,8 @@ public class CpuMetric {
 	private static final String FIELD_NAME_PID = "pid";
 	private static final String FIELD_NAME_CPU = "cpu";
 
+	private static final String FIELD_NAME_IOUTIL = "ioutil";
+
 	@JsonInclude(JsonInclude.Include.NON_NULL)
 	@JsonProperty(value = FIELD_NAME_HOST, required = true)
 	private final String host;
@@ -52,14 +54,21 @@ public class CpuMetric {
 	@JsonProperty(value = FIELD_NAME_CPU, required = true)
 	private final double cpu;
 
+	@JsonInclude(JsonInclude.Include.NON_NULL)
+	@JsonProperty(value = FIELD_NAME_IOUTIL, required = true)
+	private final double ioUtil;
+
+
 	@JsonCreator
 	public CpuMetric(
 			@Nullable @JsonProperty(FIELD_NAME_HOST) String host,
 			@Nullable @JsonProperty(FIELD_NAME_PID) int pid,
-			@JsonProperty(FIELD_NAME_CPU) double cpu) {
+			@JsonProperty(FIELD_NAME_CPU) double cpu,
+			@JsonProperty(FIELD_NAME_IOUTIL) double ioUtil) {
 		this.host = host;
 		this.pid = pid;
 		this.cpu = cpu;
+		this.ioUtil = ioUtil;
 	}
 
 	@JsonIgnore
@@ -77,6 +86,11 @@ public class CpuMetric {
 		return cpu;
 	}
 
+	@JsonIgnore
+	public double getIoUtil() {
+        return ioUtil;
+    }
+
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) {
@@ -87,13 +101,14 @@ public class CpuMetric {
 		}
 		CpuMetric cpuMetric = (CpuMetric) o;
 		return Double.compare(cpuMetric.cpu, cpu) == 0 &&
+		    Double.compare(cpuMetric.ioUtil, ioUtil) == 0 &&
 			Objects.equals(host, cpuMetric.host) &&
 			Objects.equals(pid, cpuMetric.pid);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(host, pid, cpu);
+		return Objects.hash(host, pid, cpu, ioUtil);
 	}
 
 	@Override

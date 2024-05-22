@@ -26,6 +26,8 @@ import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.core.JsonProcessin
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.JsonNode;
 
 import com.github.nexmark.flink.utils.NexmarkUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 
@@ -37,6 +39,7 @@ import static java.util.Objects.requireNonNull;
  * Response type for TPS aggregated metrics. Contains the metric name and optionally the sum, average, minimum and maximum.
  */
 public class TpsMetric {
+	private static final Logger LOG = LoggerFactory.getLogger(TpsMetric.class);
 
 	private static final String FIELD_NAME_ID = "id";
 
@@ -47,6 +50,8 @@ public class TpsMetric {
 	private static final String FIELD_NAME_AVG = "avg";
 
 	private static final String FIELD_NAME_SUM = "sum";
+
+	private static final String FIELD_NAME_SKEW = "skew";
 
 	@JsonProperty(value = FIELD_NAME_ID, required = true)
 	private final String id;
@@ -67,23 +72,29 @@ public class TpsMetric {
 	@JsonProperty(FIELD_NAME_SUM)
 	private final Double sum;
 
+	@JsonInclude(JsonInclude.Include.NON_NULL)
+	@JsonProperty(FIELD_NAME_SKEW)
+	private final Double skew;
+
 	@JsonCreator
 	public TpsMetric(
 		final @JsonProperty(value = FIELD_NAME_ID, required = true) String id,
 		final @Nullable @JsonProperty(FIELD_NAME_MIN) Double min,
 		final @Nullable @JsonProperty(FIELD_NAME_MAX) Double max,
 		final @Nullable @JsonProperty(FIELD_NAME_AVG) Double avg,
-		final @Nullable @JsonProperty(FIELD_NAME_SUM) Double sum) {
+		final @Nullable @JsonProperty(FIELD_NAME_SUM) Double sum,
+		final @Nullable @JsonProperty(FIELD_NAME_SKEW) Double skew) {
 
 		this.id = requireNonNull(id, "id must not be null");
 		this.min = min;
 		this.max = max;
 		this.avg = avg;
 		this.sum = sum;
+		this.skew = skew;
 	}
 
 	public TpsMetric(final @JsonProperty(value = FIELD_NAME_ID, required = true) String id) {
-		this(id, null, null, null, null);
+		this(id, null, null, null, null, null);
 	}
 
 	@JsonIgnore

@@ -34,7 +34,8 @@ public class TpsMetricTest {
 			"\"min\": 5003.2,\n" +
 			"\"max\": 5003.2,\n" +
 			"\"avg\": 5003.2,\n" +
-			"\"sum\": 10006.3\n" +
+			"\"sum\": 10006.3,\n" +
+			"\"skew\": 42.2\n" +
 			"}\n" +
 			"]";
 
@@ -44,7 +45,8 @@ public class TpsMetricTest {
 			5003.2,
 			5003.2,
 			5003.2,
-			10006.3);
+			10006.3,
+				42.2);
 		assertEquals(expected, tps);
 	}
 }

@@ -34,6 +34,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -52,6 +53,9 @@ public class CpuMetricReceiver implements Closeable {
 	private final ServerSocket server;
 
 	private final ConcurrentHashMap<String, Double> cpuMetrics = new ConcurrentHashMap<>();
+
+	private final ConcurrentHashMap<String, Double> ioUtilMetrics = new ConcurrentHashMap<>();
+
 
 	private final ExecutorService service = Executors.newCachedThreadPool();
 
@@ -73,7 +77,7 @@ public class CpuMetricReceiver implements Closeable {
 			//noinspection InfiniteLoopStatement
 			while (true) {
 				Socket socket = server.accept();
-				service.submit(new ServerThread(socket, cpuMetrics));
+				service.submit(new ServerThread(socket, cpuMetrics, ioUtilMetrics));
 			}
 		} catch (IOException e) {
 			LOG.error("Failed to start the socket server.", e);
@@ -101,6 +105,12 @@ public class CpuMetricReceiver implements Closeable {
 		return cpuMetrics.size();
 	}
 
+	public void printIOUtil() {
+		System.out.println("=============== IOUtil ===============");
+		for (Map.Entry<String, Double> entry : ioUtilMetrics.entrySet()) {
+			System.out.println(String.format("Host %s, IOUtil: %f", entry.getKey(), entry.getValue()));
+        }
+	}
 	@Override
 	public void close() {
 		try {
@@ -115,10 +125,13 @@ public class CpuMetricReceiver implements Closeable {
 
 		private final Socket socket;
 		private final ConcurrentHashMap<String, Double> cpuMetrics;
+		private final ConcurrentHashMap<String, Double> ioUtilMetrics;
 
-		private ServerThread(Socket socket, ConcurrentHashMap<String, Double> cpuMetrics) {
+
+		private ServerThread(Socket socket, ConcurrentHashMap<String, Double> cpuMetrics, ConcurrentHashMap<String, Double> ioUtilMetrics) {
 			this.socket = socket;
 			this.cpuMetrics = cpuMetrics;
+			this.ioUtilMetrics = ioUtilMetrics;
 		}
 
 		@Override
@@ -140,6 +153,7 @@ public class CpuMetricReceiver implements Closeable {
 						List<CpuMetric> receivedMetrics = CpuMetric.fromJsonArray(message);
 						for (CpuMetric metric : receivedMetrics) {
 							cpuMetrics.put(metric.getHost() + ":" + metric.getPid(), metric.getCpu());
+							ioUtilMetrics.put(metric.getHost() + ":" + metric.getPid(), metric.getIoUtil());
 						}
 						buffer.reset();
 					}

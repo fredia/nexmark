@@ -26,6 +26,8 @@ import org.apache.commons.io.filefilter.DirectoryFileFilter;
 import org.apache.commons.io.filefilter.RegexFileFilter;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -52,6 +54,7 @@ import java.util.regex.Pattern;
  * Based on ProcfsBasedProcessTree from YARN project.
  */
 public class ProcfsBasedProcessTree {
+	private static final Logger LOG = LoggerFactory.getLogger(ProcfsBasedProcessTree.class);
 
 	private static final String PROCFS = "/proc/";
 
@@ -111,6 +114,8 @@ public class ProcfsBasedProcessTree {
 	protected Map<String, ProcessTreeSmapMemInfo> processSMAPTree =
 		new HashMap<String, ProcessTreeSmapMemInfo>();
 
+	protected ProcessDiskInfo processDiskInfo;
+
 	// to enable testing, using this variable which can be configured
 	// to a test directory.
 	private String procfsDir;
@@ -159,6 +164,7 @@ public class ProcfsBasedProcessTree {
 		this.procfsDir = procfsDir;
 		this.cpuTimeTracker = new CpuTimeTracker(JIFFY_LENGTH_IN_MILLIS);
 		this.smapsEnabled = smapsEnabled;
+		this.processDiskInfo = new ProcessDiskInfo();
 	}
 
 	public void setSmapsEnabled(boolean smapsEnabled) {
@@ -253,6 +259,11 @@ public class ProcfsBasedProcessTree {
 					}
 				}
 			}
+
+
+			// update disk stat
+			updateDiskStat();
+
 		}
 	}
 
@@ -954,6 +965,98 @@ public class ProcfsBasedProcessTree {
 				.append(MemInfo.ANONYMOUS.name + ":" + this.getAnonymous())
 				.append(" kB\n");
 			return sb.toString();
+		}
+	}
+
+	public float getDiskTick() {
+		return processDiskInfo.totTicks;
+	}
+
+	private void updateDiskStat() {
+		// Read "/proc/diskstats" file
+		BufferedReader in = null;
+		InputStreamReader fReader = null;
+		try {
+			fReader = new InputStreamReader(
+					new FileInputStream(
+							new File("/proc/diskstats")), Charset.forName("UTF-8"));
+			in = new BufferedReader(fReader);
+		} catch (FileNotFoundException f) {
+			LOG.info("File not found: /proc/diskstats");
+		}
+
+		try {
+			in.readLine();
+			String str = in.readLine(); // use second line
+			LOG.info(str.trim().split("\\s+").length + " " + str);
+			long ticks = Long.parseLong(str.trim().split("\\s+")[12]);
+			long oldTicks = processDiskInfo.totTicks;
+			long oldSampleTime = processDiskInfo.sampleTime;
+			processDiskInfo.updateTotTicks(ticks, oldTicks, clock.absoluteTimeMillis(), oldSampleTime);
+		} catch (IOException io) {
+
+		} finally {
+			// Close the streams
+			try {
+				fReader.close();
+				try {
+					in.close();
+				} catch (IOException i) {
+				}
+			} catch (IOException i) {
+			}
+		}
+	}
+
+	/**
+     * "/proc/diskstats", disk level information, all processes share disks
+     */
+	static class ProcessDiskInfo {
+		String diskName;
+		long rdIOs;
+		long wrIOs;
+		long totTicks;
+		long deltaTotTicks;
+
+		long sampleTime;
+
+		long deltaSampleTime;
+
+		public ProcessDiskInfo() {
+            this.diskName = "empty";
+			this.rdIOs = -1;
+			this.wrIOs = -1;
+			this.totTicks = -1;
+			this.sampleTime = -1;
+			this.deltaTotTicks = 0;
+			this.deltaSampleTime = 0;
+        }
+
+		public void updateTotTicks(long newTicks, long oldTotTicks, long newTime, long oldSampleTime) {
+			this.totTicks = newTicks;
+			this.sampleTime = newTime;
+			if (oldTotTicks == -1) {
+				this.deltaSampleTime = 0;
+				this.deltaTotTicks = 0;
+				return;
+			}
+			if (sampleTime > oldSampleTime && totTicks >= oldTotTicks) {
+				this.deltaTotTicks = this.totTicks - oldTotTicks;
+				this.deltaSampleTime = this.sampleTime - oldSampleTime;
+			}
+        }
+
+		public double getPercent() {
+			if (this.deltaSampleTime == 0) {
+                return 0;
+            }
+            return (float)this.deltaTotTicks / (float)this.deltaSampleTime;
+		}
+
+		@Override
+		public String toString() {
+			return "ProcessDiskInfo{diskName: " + diskName + ", rdIOs: "
+					+ rdIOs + ", wrIOs: " + wrIOs + ", totTicks: " + totTicks + ", deltaTotTicks:" + deltaTotTicks + "}";
 		}
 	}
 

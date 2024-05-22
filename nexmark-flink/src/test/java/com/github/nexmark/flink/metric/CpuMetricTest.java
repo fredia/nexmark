@@ -34,9 +34,9 @@ public class CpuMetricTest {
 	@Test
 	public void testCpuMetric() throws JsonProcessingException {
 		List<CpuMetric> cpuMetrics = new ArrayList<>();
-		cpuMetrics.add(new CpuMetric("10.0.0.12", 37927, 1.01));
-		cpuMetrics.add(new CpuMetric("10.1.0.33", 54389, 2.3));
-		cpuMetrics.add(new CpuMetric("10.2.0.44", 4401, 0.4));
+		cpuMetrics.add(new CpuMetric("10.0.0.12", 37927, 1.01, 0.3));
+		cpuMetrics.add(new CpuMetric("10.1.0.33", 54389, 2.3, 0.2));
+		cpuMetrics.add(new CpuMetric("10.2.0.44", 4401, 0.4, 0.3));
 		String result = NexmarkUtils.MAPPER.writeValueAsString(cpuMetrics);
 
 		List<CpuMetric> expected = CpuMetric.fromJsonArray(result);

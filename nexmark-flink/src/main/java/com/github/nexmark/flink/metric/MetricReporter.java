@@ -244,6 +244,7 @@ public class MetricReporter {
 								metric.getPrettyTps(), metric.getPrettyCpu(), tms) :
 						String.format("Current Cores=%s (%s TMs)", metric.getPrettyCpu(), tms);
 				System.out.println(message);
+				cpuMetricReceiver.printIOUtil();
 				LOG.info(message);
 			} catch (Exception e) {
 				error = e;
