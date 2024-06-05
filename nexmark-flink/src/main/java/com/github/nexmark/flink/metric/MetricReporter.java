@@ -174,6 +174,13 @@ public class MetricReporter {
 		}
 		double sumTps = 0.0;
 		double sumCpu = 0.0;
+		double sumTaskCpu = 0.0;
+		double sumForStCoor = 0.0;
+		double sumForStWrite = 0.0;
+		double sumForStRead = 0.0;
+		double sumRocksdbLow = 0.0;
+		double sumRocksdbHigh = 0.0;
+		double sumIOUtil = 0.0;
 		int realMetricSize = metrics.size();
 
 		// If the job finished, the tps will drop to 0, so we need to remove the effect of these metrics on the final result
@@ -189,23 +196,48 @@ public class MetricReporter {
 		for (BenchmarkMetric metric : realMetrics) {
 			sumTps += metric.getTps();
 			sumCpu += metric.getCpu();
+			sumTaskCpu += metric.getTaskCpu();
+			sumForStCoor += metric.forstCoorCpu;
+			sumForStWrite += metric.forstWriteCpu;
+			sumForStRead += metric.forstReadCpu;
+			sumRocksdbLow += metric.rocksdbLowCpu;
+			sumRocksdbHigh += metric.rocksdbHighCpu;
+			sumIOUtil += metric.getIoUtil();
 		}
 
 		double avgTps = sumTps / realMetrics.size();
 		double avgCpu = sumCpu / realMetrics.size();
+		double avgTaskCpu = sumTaskCpu / realMetrics.size();
+		double avgForStCoor = sumForStCoor / realMetrics.size();
+		double avgForStWrite = sumForStWrite / realMetrics.size();
+		double avgForStRead = sumForStRead / realMetrics.size();
+		double avgRocksdbLow = sumRocksdbLow / realMetrics.size();
+		double avgRocksdbHigh = sumRocksdbHigh / realMetrics.size();
+		double avgIOUtil = sumIOUtil / realMetrics.size();
 		JobBenchmarkMetric metric = new JobBenchmarkMetric(
-				avgTps, avgCpu, eventsNum, endTime - startTime);
+				avgTps, avgCpu, eventsNum, endTime - startTime, avgIOUtil);
 
 		String message;
 		if (eventsNum == 0) {
-			message = String.format("Summary Average: Throughput=%s, Cores=%s",
+			message = String.format("Summary Average: Throughput=%s, Cores=%s, TaskCpu=%f, ioUtil=%f",
 					metric.getPrettyTps(),
-					metric.getPrettyCpu());
-		} else {
-			message = String.format("Summary Average: EventsNum=%s, Cores=%s, Time=%s s",
-					NUMBER_FORMAT.format(eventsNum),
 					metric.getPrettyCpu(),
-					formatDoubleValue(metric.getTimeSeconds()));
+					avgTaskCpu,
+					avgIOUtil);
+		} else {
+			message = String.format("Summary Average:  EventsNum=%s, Throughput=%s, Cores=%s, Time=%s s, TaskCpu=%f, ForStCoor=%f, " +
+							"ForStWrite=%f, ForStRead=%f, RocksLow=%f, RocksHigh=%f, ioUtil=%f",
+					NUMBER_FORMAT.format(eventsNum),
+					metric.getPrettyTps(),
+					metric.getPrettyCpu(),
+					formatDoubleValue(metric.getTimeSeconds()),
+					avgTaskCpu,
+					avgForStCoor,
+                    avgForStWrite,
+                    avgForStRead,
+                    avgRocksdbLow,
+                    avgRocksdbHigh,
+					avgIOUtil);
 		}
 		System.out.println(message);
 		LOG.info(message);
@@ -235,7 +267,15 @@ public class MetricReporter {
 				TpsMetric tps = flinkRestClient.getTpsMetric(jobId, vertexId, metricName);
 				double cpu = cpuMetricReceiver.getTotalCpu();
 				int tms = cpuMetricReceiver.getNumberOfTM();
-				BenchmarkMetric metric = new BenchmarkMetric(tps.getSum(), cpu);
+				BenchmarkMetric metric = new BenchmarkMetric(tps.getSum(),
+						cpu,
+						cpuMetricReceiver.getTotalMetric(cpuMetricReceiver.taskCpuMetrics),
+						cpuMetricReceiver.getTotalMetric(cpuMetricReceiver.forstCoorMetrics),
+						cpuMetricReceiver.getTotalMetric(cpuMetricReceiver.forstWriteMetrics),
+						cpuMetricReceiver.getTotalMetric(cpuMetricReceiver.forstReadMetrics),
+						cpuMetricReceiver.getTotalMetric(cpuMetricReceiver.rocksdbLowMetrics),
+						cpuMetricReceiver.getTotalMetric(cpuMetricReceiver.rocksdbHighMetrics),
+						cpuMetricReceiver.getTotalIOUtil()/tms);
 				// it's thread-safe to update metrics
 				metrics.add(metric);
 				// logging
@@ -243,8 +283,7 @@ public class MetricReporter {
 						String.format("Current Throughput=%s, Cores=%s (%s TMs)",
 								metric.getPrettyTps(), metric.getPrettyCpu(), tms) :
 						String.format("Current Cores=%s (%s TMs)", metric.getPrettyCpu(), tms);
-				System.out.println(message);
-				cpuMetricReceiver.printIOUtil();
+				cpuMetricReceiver.printAll();
 				LOG.info(message);
 			} catch (Exception e) {
 				error = e;

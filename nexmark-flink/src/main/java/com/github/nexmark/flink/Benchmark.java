@@ -221,15 +221,16 @@ public class Benchmark {
 
 	private static void printEventNumSummary(
 			int itemMaxLength, LinkedHashMap<String, JobBenchmarkMetric> totalMetrics) {
-		printLine('-', "+", itemMaxLength, "", "", "", "", "", "");
-		printLine(' ', "|", itemMaxLength, " Nexmark Query", " Events Num", " Cores", " Time(s)", " Cores * Time(s)", " Throughput/Cores");
-		printLine('-', "+", itemMaxLength, "", "", "", "", "", "");
+		printLine('-', "+", itemMaxLength, "", "", "", "", "", "", "");
+		printLine(' ', "|", itemMaxLength, " Nexmark Query", " Events Num", " Cores", " Time(s)", " Cores * Time(s)", " Throughput/Cores", " IO Util");
+		printLine('-', "+", itemMaxLength, "", "", "", "", "", "", "");
 
 		long totalEventsNum = 0;
 		double totalCpus = 0;
 		double totalTimeSeconds = 0;
 		double totalCoresMultiplyTimeSeconds = 0;
 		double totalThroughputPerCore = 0;
+		double totalIoUtil = 0;
 		for (Map.Entry<String, JobBenchmarkMetric> entry : totalMetrics.entrySet()) {
 			JobBenchmarkMetric metric = entry.getValue();
 			double throughputPerCore = metric.getEventsNum() / metric.getCoresMultiplyTimeSeconds();
@@ -239,12 +240,14 @@ public class Benchmark {
 					NUMBER_FORMAT.format(metric.getCpu()),
 					formatDoubleValue(metric.getTimeSeconds()),
 					formatDoubleValue(metric.getCoresMultiplyTimeSeconds()),
-					formatLongValuePerSecond((long) throughputPerCore));
+					formatLongValuePerSecond((long) throughputPerCore),
+					formatDoubleValue(metric.getIoUtil()));
 			totalEventsNum += metric.getEventsNum();
 			totalCpus += metric.getCpu();
 			totalTimeSeconds += metric.getTimeSeconds();
 			totalCoresMultiplyTimeSeconds += metric.getCoresMultiplyTimeSeconds();
 			totalThroughputPerCore += throughputPerCore;
+			totalIoUtil += metric.getIoUtil();
 		}
 		printLine(' ', "|", itemMaxLength,
 				"Total",
@@ -252,8 +255,9 @@ public class Benchmark {
 				formatDoubleValue(totalCpus),
 				formatDoubleValue(totalTimeSeconds),
 				formatDoubleValue(totalCoresMultiplyTimeSeconds),
-				formatLongValuePerSecond((long) totalThroughputPerCore));
-		printLine('-', "+", itemMaxLength, "", "", "", "", "", "");
+				formatLongValuePerSecond((long) totalThroughputPerCore),
+				formatDoubleValue(totalIoUtil));
+		printLine('-', "+", itemMaxLength, "", "", "", "", "", "", "");
 	}
 
 	private static void printTPSSummary(

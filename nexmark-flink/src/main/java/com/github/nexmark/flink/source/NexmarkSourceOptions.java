@@ -171,8 +171,4 @@ public class NexmarkSourceOptions {
 
 		return nexmarkConf;
 	}
-
-
-
-
 }

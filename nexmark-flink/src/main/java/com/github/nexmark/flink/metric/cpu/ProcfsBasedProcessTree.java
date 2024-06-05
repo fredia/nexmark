@@ -72,6 +72,13 @@ public class ProcfsBasedProcessTree {
 	public static final long JIFFY_LENGTH_IN_MILLIS =
 		SysInfoLinux.JIFFY_LENGTH_IN_MILLIS; // in millisecond
 	private final CpuTimeTracker cpuTimeTracker;
+	private final CpuTimeTracker taskCpuTracker;
+	private final CpuTimeTracker forstCoorTracker;
+	private final CpuTimeTracker forstWriteTracker;
+	private final CpuTimeTracker forstReadTracker;
+	private final CpuTimeTracker rocksLowTracker;
+	private final CpuTimeTracker rocksHighTracker;
+
 	private Clock clock;
 
 	enum MemInfo {
@@ -128,6 +135,13 @@ public class ProcfsBasedProcessTree {
 	protected Map<String, ProcessInfo> processTree =
 		new HashMap<String, ProcessInfo>();
 
+	protected List<ProcessInfo> taskTree = new ArrayList<>();
+	protected List<ProcessInfo> forstCoor = new ArrayList<>();
+	protected List<ProcessInfo> forstRead = new ArrayList<>();
+	protected List<ProcessInfo> forstWrite = new ArrayList<>();
+	protected List<ProcessInfo> rocksLow = new ArrayList<>();
+	protected List<ProcessInfo> rocksHigh = new ArrayList<>();
+
 	public ProcfsBasedProcessTree() throws IOException {
 		this(new File(PROCFS, SELF).getCanonicalFile().getName());
 	}
@@ -163,6 +177,12 @@ public class ProcfsBasedProcessTree {
 		this.pid = getValidPID(pid);
 		this.procfsDir = procfsDir;
 		this.cpuTimeTracker = new CpuTimeTracker(JIFFY_LENGTH_IN_MILLIS);
+		this.taskCpuTracker = new CpuTimeTracker(JIFFY_LENGTH_IN_MILLIS);
+		this.forstCoorTracker = new CpuTimeTracker(JIFFY_LENGTH_IN_MILLIS);
+		this.forstWriteTracker = new CpuTimeTracker(JIFFY_LENGTH_IN_MILLIS);
+		this.forstReadTracker = new CpuTimeTracker(JIFFY_LENGTH_IN_MILLIS);
+		this.rocksLowTracker = new CpuTimeTracker(JIFFY_LENGTH_IN_MILLIS);
+		this.rocksHighTracker = new CpuTimeTracker(JIFFY_LENGTH_IN_MILLIS);
 		this.smapsEnabled = smapsEnabled;
 		this.processDiskInfo = new ProcessDiskInfo();
 	}
@@ -203,6 +223,8 @@ public class ProcfsBasedProcessTree {
 			if (me == null) {
 				return;
 			}
+
+			getTaskList(me.pid);
 
 			// Add each process to its parent.
 			for (Map.Entry<String, ProcessInfo> entry : allProcessInfo.entrySet()) {
@@ -442,6 +464,20 @@ public class ProcfsBasedProcessTree {
 		return totalStime.add(BigInteger.valueOf(totalUtime));
 	}
 
+	private static BigInteger getTotalTaskThreadJiffies(List<ProcessInfo> value) {
+		BigInteger totalStime = BigInteger.ZERO;
+		long totalUtime = 0;
+		for (ProcessInfo p : value) {
+			// LOG.info("Task Info: {} {} {} {}", p.getPid(), p.getName(), p.getStime(), p.getUtime());
+			if (p != null) {
+				totalUtime += p.getUtime();
+				totalStime = totalStime.add(p.getStime());
+			}
+		}
+		return totalStime.add(BigInteger.valueOf(totalUtime));
+	}
+
+
 	/**
 	 * Get the CPU usage by all the processes in the process-tree in Unix.
 	 * Note: UNAVAILABLE will be returned in case when CPU usage is not
@@ -457,6 +493,48 @@ public class ProcfsBasedProcessTree {
 		return cpuTimeTracker.getCpuTrackerUsagePercent();
 	}
 
+	public float getMainTaskCpu() {
+		BigInteger processTotalJiffies = getTotalTaskThreadJiffies(taskTree);
+		taskCpuTracker.updateElapsedJiffies(processTotalJiffies,
+				clock.absoluteTimeMillis());
+		return taskCpuTracker.getCpuTrackerUsagePercent();
+	}
+
+	public float getForstCoorCpu() {
+        BigInteger processTotalJiffies = getTotalTaskThreadJiffies(forstCoor);
+        forstCoorTracker.updateElapsedJiffies(processTotalJiffies,
+                clock.absoluteTimeMillis());
+        return forstCoorTracker.getCpuTrackerUsagePercent();
+    }
+
+	public float getForstWriteCpu() {
+        BigInteger processTotalJiffies = getTotalTaskThreadJiffies(forstWrite);
+        forstWriteTracker.updateElapsedJiffies(processTotalJiffies,
+                clock.absoluteTimeMillis());
+        return forstWriteTracker.getCpuTrackerUsagePercent();
+    }
+
+	public float getForstReadCpu() {
+        BigInteger processTotalJiffies = getTotalTaskThreadJiffies(forstRead);
+        forstReadTracker.updateElapsedJiffies(processTotalJiffies,
+                clock.absoluteTimeMillis());
+        return forstReadTracker.getCpuTrackerUsagePercent();
+    }
+
+	public float getRocksLowCpu() {
+        BigInteger processTotalJiffies = getTotalTaskThreadJiffies(rocksLow);
+        rocksLowTracker.updateElapsedJiffies(processTotalJiffies,
+                clock.absoluteTimeMillis());
+        return rocksLowTracker.getCpuTrackerUsagePercent();
+    }
+
+	public float getRocksHighCpu() {
+        BigInteger processTotalJiffies = getTotalTaskThreadJiffies(rocksHigh);
+        rocksHighTracker.updateElapsedJiffies(processTotalJiffies,
+                clock.absoluteTimeMillis());
+        return rocksHighTracker.getCpuTrackerUsagePercent();
+    }
+
 	private static String getValidPID(String pid) {
 		if (pid == null) {
 			return deadPid;
@@ -466,6 +544,62 @@ public class ProcfsBasedProcessTree {
 			return pid;
 		}
 		return deadPid;
+	}
+
+	private void getTaskList(String pid) {
+		taskTree.clear();
+		forstRead.clear();
+		forstWrite.clear();
+		forstCoor.clear();
+		rocksLow.clear();
+		rocksHigh.clear();
+		File taskDir = new File(procfsDir, pid + "/task");
+		FileFilter procListFileFilter = new AndFileFilter(
+				DirectoryFileFilter.INSTANCE, new RegexFileFilter(numberPattern));
+		File[] taskList = taskDir.listFiles(procListFileFilter);
+		if (ArrayUtils.isNotEmpty(taskList)) {
+            for (File task : taskList) {
+                File stat = new File(task, "stat");
+				if (stat.exists()) {
+					BufferedReader in = null;
+					InputStreamReader fReader = null;
+					try {
+						fReader = new InputStreamReader(
+								new FileInputStream(stat), Charset.forName("UTF-8"));
+						in = new BufferedReader(fReader);
+						String str = in.readLine();
+						// LOG.info("task {}, {}", task.getName(), str);
+						Matcher m = PROCFS_STAT_FILE_FORMAT.matcher(str);
+						boolean mat = m.find();
+						if (mat) {
+							String processName = "(" + m.group(2) + ")";
+							ProcessInfo pinfo = new ProcessInfo(task.getName());
+							// Set (name) (ppid) (pgrpId) (session) (utime) (stime) (vsize) (rss)
+							pinfo.updateProcessInfo(processName, m.group(3),
+									Integer.parseInt(m.group(4)), Integer.parseInt(m.group(5)),
+									Long.parseLong(m.group(7)), new BigInteger(m.group(8)),
+									Long.parseLong(m.group(10)), Long.parseLong(m.group(11)));
+							if (processName.startsWith("(Join")) {
+								taskTree.add(pinfo);
+							} else if (processName.startsWith("(ForSt-worker")) {
+								forstRead.add(pinfo);
+							} else if (processName.startsWith("(ForSt-write")) {
+								forstWrite.add(pinfo);
+                            } else if (processName.startsWith("(ForSt-Coor")) {
+								forstCoor.add(pinfo);
+							} else if (processName.startsWith("(rocksdb:low")) {
+								rocksLow.add(pinfo);
+							} else if (processName.startsWith("(rocksdb:high")) {
+								rocksHigh.add(pinfo);
+                            }
+						}
+					} catch (Exception f) {
+						LOG.error(f.getMessage());
+						// The process vanished in the interim!
+					}
+                }
+            }
+        }
 	}
 
 	/**
@@ -987,8 +1121,10 @@ public class ProcfsBasedProcessTree {
 
 		try {
 			in.readLine();
-			String str = in.readLine(); // use second line
-			LOG.info(str.trim().split("\\s+").length + " " + str);
+			in.readLine();
+			in.readLine();
+			String str = in.readLine(); // use third line
+			// LOG.info(str.trim().split("\\s+").length + " " + str);
 			long ticks = Long.parseLong(str.trim().split("\\s+")[12]);
 			long oldTicks = processDiskInfo.totTicks;
 			long oldSampleTime = processDiskInfo.sampleTime;

@@ -40,6 +40,13 @@ public class CpuMetric {
 	private static final String FIELD_NAME_PID = "pid";
 	private static final String FIELD_NAME_CPU = "cpu";
 
+	private static final String FIELD_NAME_TASK_CPU = "taskcpu";
+	private static final String FIELD_NAME_FORST_COOR_CPU = "forstcoorcpu";
+	private static final String FIELD_NAME_FORST_READ_CPU = "forstreadcpu";
+	private static final String FIELD_NAME_FORST_WRITE_CPU = "forstwritecpu";
+	private static final String FIELD_NAME_ROCKS_LOW_CPU = "rockslowcpu";
+	private static final String FIELD_NAME_ROCKS_HIGH_CPU = "rockshighcpu";
+
 	private static final String FIELD_NAME_IOUTIL = "ioutil";
 
 	@JsonInclude(JsonInclude.Include.NON_NULL)
@@ -55,6 +62,30 @@ public class CpuMetric {
 	private final double cpu;
 
 	@JsonInclude(JsonInclude.Include.NON_NULL)
+	@JsonProperty(value = FIELD_NAME_TASK_CPU, required = true)
+	private final double taskCpu;
+
+	@JsonInclude(JsonInclude.Include.NON_NULL)
+	@JsonProperty(value = FIELD_NAME_FORST_COOR_CPU, required = true)
+	private final double forstCoorCpu;
+
+	@JsonInclude(JsonInclude.Include.NON_NULL)
+	@JsonProperty(value = FIELD_NAME_FORST_WRITE_CPU, required = true)
+	private final double forstWriteCpu;
+
+	@JsonInclude(JsonInclude.Include.NON_NULL)
+	@JsonProperty(value = FIELD_NAME_FORST_READ_CPU, required = true)
+	private final double forstReadCpu;
+
+	@JsonInclude(JsonInclude.Include.NON_NULL)
+	@JsonProperty(value = FIELD_NAME_ROCKS_LOW_CPU, required = true)
+	private final double rocksdbLowCpu;
+
+	@JsonInclude(JsonInclude.Include.NON_NULL)
+	@JsonProperty(value = FIELD_NAME_ROCKS_HIGH_CPU, required = true)
+	private final double rocksdbHighCpu;
+
+	@JsonInclude(JsonInclude.Include.NON_NULL)
 	@JsonProperty(value = FIELD_NAME_IOUTIL, required = true)
 	private final double ioUtil;
 
@@ -64,10 +95,22 @@ public class CpuMetric {
 			@Nullable @JsonProperty(FIELD_NAME_HOST) String host,
 			@Nullable @JsonProperty(FIELD_NAME_PID) int pid,
 			@JsonProperty(FIELD_NAME_CPU) double cpu,
+			@JsonProperty(FIELD_NAME_TASK_CPU) double taskCpu,
+			@JsonProperty(FIELD_NAME_FORST_COOR_CPU) double forstCoorCpu,
+            @JsonProperty(FIELD_NAME_FORST_WRITE_CPU) double forstWriteCpu,
+            @JsonProperty(FIELD_NAME_FORST_READ_CPU) double forstReadCpu,
+            @JsonProperty(FIELD_NAME_ROCKS_LOW_CPU) double rocksdbLowCpu,
+            @JsonProperty(FIELD_NAME_ROCKS_HIGH_CPU) double rocksdbHighCpu,
 			@JsonProperty(FIELD_NAME_IOUTIL) double ioUtil) {
 		this.host = host;
 		this.pid = pid;
 		this.cpu = cpu;
+		this.taskCpu = taskCpu;
+		this.forstCoorCpu = forstCoorCpu;
+        this.forstWriteCpu = forstWriteCpu;
+        this.forstReadCpu = forstReadCpu;
+        this.rocksdbLowCpu = rocksdbLowCpu;
+        this.rocksdbHighCpu = rocksdbHighCpu;
 		this.ioUtil = ioUtil;
 	}
 
@@ -89,6 +132,36 @@ public class CpuMetric {
 	@JsonIgnore
 	public double getIoUtil() {
         return ioUtil;
+    }
+
+	@JsonIgnore
+    public double getTaskCpu() {
+        return taskCpu;
+    }
+
+	@JsonIgnore
+	public double getForstCoorCpu() {
+        return forstCoorCpu;
+    }
+
+	@JsonIgnore
+    public double getForstWriteCpu() {
+        return forstWriteCpu;
+    }
+
+	@JsonIgnore
+    public double getForstReadCpu() {
+        return forstReadCpu;
+    }
+
+	@JsonIgnore
+    public double getRocksdbLowCpu() {
+        return rocksdbLowCpu;
+    }
+
+	@JsonIgnore
+    public double getRocksdbHighCpu() {
+        return rocksdbHighCpu;
     }
 
 	@Override

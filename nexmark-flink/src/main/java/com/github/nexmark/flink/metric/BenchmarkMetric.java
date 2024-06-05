@@ -29,9 +29,35 @@ public class BenchmarkMetric {
 	private final double tps;
 	private final double cpu;
 
-	public BenchmarkMetric(double tps, double cpu) {
+	private final double taskCpu;
+
+	final double forstCoorCpu;
+
+	final double forstWriteCpu;
+
+	final double forstReadCpu;
+
+	final double rocksdbLowCpu;
+
+	final double rocksdbHighCpu;
+	private final double ioUtil;
+
+	public BenchmarkMetric(double tps, double cpu, double taskCpu,
+						   double forstCoorCpu,
+						   double forstWriteCpu,
+						   double forstReadCpu,
+						   double rocksdbLowCpu,
+						   double rocksdbHighCpu,
+						   double ioUtil) {
 		this.tps = tps;
 		this.cpu = cpu;
+		this.taskCpu = taskCpu;
+		this.forstCoorCpu = forstCoorCpu;
+        this.forstWriteCpu = forstWriteCpu;
+        this.forstReadCpu = forstReadCpu;
+        this.rocksdbLowCpu = rocksdbLowCpu;
+        this.rocksdbHighCpu = rocksdbHighCpu;
+		this.ioUtil = ioUtil;
 	}
 
 	public double getTps() {
@@ -49,6 +75,14 @@ public class BenchmarkMetric {
 	public String getPrettyCpu() {
 		return NUMBER_FORMAT.format(cpu);
 	}
+
+	public double getTaskCpu() {
+        return taskCpu;
+    }
+
+	public double getIoUtil() {
+        return ioUtil;
+    }
 
 	@Override
 	public boolean equals(Object o) {

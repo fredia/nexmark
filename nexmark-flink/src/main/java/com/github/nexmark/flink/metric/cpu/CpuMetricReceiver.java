@@ -54,7 +54,19 @@ public class CpuMetricReceiver implements Closeable {
 
 	private final ConcurrentHashMap<String, Double> cpuMetrics = new ConcurrentHashMap<>();
 
-	private final ConcurrentHashMap<String, Double> ioUtilMetrics = new ConcurrentHashMap<>();
+	public final ConcurrentHashMap<String, Double> taskCpuMetrics = new ConcurrentHashMap<>();
+
+	public final ConcurrentHashMap<String, Double> forstCoorMetrics = new ConcurrentHashMap<>();
+
+	public final ConcurrentHashMap<String, Double> forstReadMetrics = new ConcurrentHashMap<>();
+
+	public final ConcurrentHashMap<String, Double> forstWriteMetrics = new ConcurrentHashMap<>();
+
+	public final ConcurrentHashMap<String, Double> rocksdbLowMetrics = new ConcurrentHashMap<>();
+
+	public final ConcurrentHashMap<String, Double> rocksdbHighMetrics = new ConcurrentHashMap<>();
+
+	public final ConcurrentHashMap<String, Double> ioUtilMetrics = new ConcurrentHashMap<>();
 
 
 	private final ExecutorService service = Executors.newCachedThreadPool();
@@ -77,7 +89,9 @@ public class CpuMetricReceiver implements Closeable {
 			//noinspection InfiniteLoopStatement
 			while (true) {
 				Socket socket = server.accept();
-				service.submit(new ServerThread(socket, cpuMetrics, ioUtilMetrics));
+				service.submit(new ServerThread(socket, cpuMetrics, taskCpuMetrics,
+						forstCoorMetrics, forstReadMetrics, forstWriteMetrics, rocksdbLowMetrics, rocksdbHighMetrics,
+						ioUtilMetrics));
 			}
 		} catch (IOException e) {
 			LOG.error("Failed to start the socket server.", e);
@@ -105,12 +119,41 @@ public class CpuMetricReceiver implements Closeable {
 		return cpuMetrics.size();
 	}
 
-	public void printIOUtil() {
+	public void printAll() {
 		System.out.println("=============== IOUtil ===============");
 		for (Map.Entry<String, Double> entry : ioUtilMetrics.entrySet()) {
 			System.out.println(String.format("Host %s, IOUtil: %f", entry.getKey(), entry.getValue()));
         }
+		System.out.println(String.format("taskCpu=%f, forstCoor=%f, forstRead=%f, forstWrite=%f, rocksLow=%f, rocksHigh=%f",
+				getTotalMetric(taskCpuMetrics), getTotalMetric(forstCoorMetrics), getTotalMetric(forstReadMetrics), getTotalMetric(forstWriteMetrics), getTotalMetric(rocksdbLowMetrics), getTotalMetric(rocksdbHighMetrics)));
 	}
+
+	public double getTotalIOUtil() {
+		double sumIOUtil = 0.0;
+        int size = 0;
+        for (Double ioUtil : ioUtilMetrics.values()) {
+            size++;
+            sumIOUtil += ioUtil;
+        }
+        if (size == 0) {
+            LOG.warn("The ioUtil metric receiver doesn't receive any metrics.");
+        }
+        return sumIOUtil;
+	}
+
+	public double getTotalMetric(Map<String, Double> metrics) {
+		double sumTaskCpu = 0.0;
+        int size = 0;
+        for (Double taskCpu : metrics.values()) {
+            size++;
+            sumTaskCpu += taskCpu;
+        }
+        if (size == 0) {
+            LOG.warn("The taskCpu metric receiver doesn't receive any metrics.");
+        }
+        return sumTaskCpu;
+	}
+
 	@Override
 	public void close() {
 		try {
@@ -125,12 +168,38 @@ public class CpuMetricReceiver implements Closeable {
 
 		private final Socket socket;
 		private final ConcurrentHashMap<String, Double> cpuMetrics;
+
+		private final ConcurrentHashMap<String, Double> taskCpuMetrics;
+
+		private final ConcurrentHashMap<String, Double> forstCoorMetrics;
+
+		private final ConcurrentHashMap<String, Double> forstReadMetrics;
+
+		private final ConcurrentHashMap<String, Double> forstWriteMetrics;
+
+		private final ConcurrentHashMap<String, Double> rocksdbLowMetrics;
+
+		private final ConcurrentHashMap<String, Double> rocksdbHighMetrics;
+
 		private final ConcurrentHashMap<String, Double> ioUtilMetrics;
 
 
-		private ServerThread(Socket socket, ConcurrentHashMap<String, Double> cpuMetrics, ConcurrentHashMap<String, Double> ioUtilMetrics) {
+		private ServerThread(Socket socket, ConcurrentHashMap<String, Double> cpuMetrics,
+							 ConcurrentHashMap<String, Double> taskCpuMetrics,
+							 ConcurrentHashMap<String, Double> forstCoorMetrics,
+							 ConcurrentHashMap<String, Double> forstReadMetrics,
+							 ConcurrentHashMap<String, Double> forstWriteMetrics,
+							 ConcurrentHashMap<String, Double> rocksdbLowMetrics,
+                             ConcurrentHashMap<String, Double> rocksdbHighMetrics,
+							 ConcurrentHashMap<String, Double> ioUtilMetrics) {
 			this.socket = socket;
 			this.cpuMetrics = cpuMetrics;
+			this.taskCpuMetrics = taskCpuMetrics;
+			this.forstCoorMetrics = forstCoorMetrics;
+			this.forstReadMetrics = forstReadMetrics;
+            this.forstWriteMetrics = forstWriteMetrics;
+            this.rocksdbLowMetrics = rocksdbLowMetrics;
+            this.rocksdbHighMetrics = rocksdbHighMetrics;
 			this.ioUtilMetrics = ioUtilMetrics;
 		}
 
@@ -153,6 +222,12 @@ public class CpuMetricReceiver implements Closeable {
 						List<CpuMetric> receivedMetrics = CpuMetric.fromJsonArray(message);
 						for (CpuMetric metric : receivedMetrics) {
 							cpuMetrics.put(metric.getHost() + ":" + metric.getPid(), metric.getCpu());
+							taskCpuMetrics.put(metric.getHost() + ":" + metric.getPid(), metric.getTaskCpu());
+							forstCoorMetrics.put(metric.getHost() + ":" + metric.getPid(), metric.getForstCoorCpu());
+							forstReadMetrics.put(metric.getHost() + ":" + metric.getPid(), metric.getForstReadCpu());
+                            forstWriteMetrics.put(metric.getHost() + ":" + metric.getPid(), metric.getForstWriteCpu());
+                            rocksdbLowMetrics.put(metric.getHost() + ":" + metric.getPid(), metric.getRocksdbLowCpu());
+                            rocksdbHighMetrics.put(metric.getHost() + ":" + metric.getPid(), metric.getRocksdbHighCpu());
 							ioUtilMetrics.put(metric.getHost() + ":" + metric.getPid(), metric.getIoUtil());
 						}
 						buffer.reset();

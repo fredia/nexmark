@@ -26,18 +26,21 @@ import static com.github.nexmark.flink.metric.BenchmarkMetric.formatLongValue;
 public class JobBenchmarkMetric {
 	private final double tps;
 	private final double cpu;
+
+	protected final double ioUtil;
 	private final long eventsNum;
 	private final long timeMills;
 
 	public JobBenchmarkMetric(double tps, double cpu) {
-		this(tps, cpu, 0, 0);
+		this(tps, cpu, 0, 0, 0);
 	}
 
-	public JobBenchmarkMetric(double tps, double cpu, long eventsNum, long timeMills) {
+	public JobBenchmarkMetric(double tps, double cpu, long eventsNum, long timeMills, double ioUtil) {
 		this.tps = tps;
 		this.eventsNum = eventsNum;
 		this.cpu = cpu;
 		this.timeMills = timeMills;
+		this.ioUtil = ioUtil;
 	}
 
 	public String getPrettyTps() {
@@ -71,6 +74,10 @@ public class JobBenchmarkMetric {
 	public double getCoresMultiplyTimeSeconds() {
 		return cpu * getTimeSeconds();
 	}
+
+	public double getIoUtil() {
+        return ioUtil;
+    }
 
 	@Override
 	public boolean equals(Object o) {

@@ -161,7 +161,16 @@ public class CpuMetricSender implements AutoCloseable {
 			processTree.updateProcessTree();
 			int pid = entry.getKey();
 			double cpuCores = processTree.getCpuUsagePercent() / 100.0;
-			cpuMetrics.add(new CpuMetric(localHostIp, pid, cpuCores, processTree.processDiskInfo.getPercent()));
+//			LOG.info("cpu cores: {}, taskCpu: {}, coor: {}, read:{}, write: {}, low: {}, high: {} ", cpuCores,
+//					processTree.getMainTaskCpu(), processTree.getForstCoorCpu(), processTree.getForstWriteCpu(), processTree.getForstReadCpu(), processTree.getRocksLowCpu(), processTree.getRocksHighCpu());
+			cpuMetrics.add(new CpuMetric(localHostIp, pid, cpuCores,
+					processTree.getMainTaskCpu() / 100.0,
+					processTree.getForstCoorCpu() / 100.0,
+					processTree.getForstWriteCpu() / 100.0 ,
+					processTree.getForstReadCpu() / 100.0,
+					processTree.getRocksLowCpu() / 100.0,
+					processTree.getRocksHighCpu() / 100.0,
+					processTree.processDiskInfo.getPercent()));
 		}
 		return cpuMetrics;
 	}
