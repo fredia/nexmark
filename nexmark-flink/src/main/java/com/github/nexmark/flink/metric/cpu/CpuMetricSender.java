@@ -122,7 +122,7 @@ public class CpuMetricSender implements AutoCloseable {
 			this.localHostIp = localAddress.getHostAddress();
 		}
 		catch (IOException e) {
-			LOG.warn("Can't connect to metric server. Skip to report metric for this round.", e);
+			LOG.warn("Can't connect to metric server. Skip to report metric for this round. " + serverAddress + " " + serverPort, e);
 			return;
 		}
 

@@ -70,8 +70,8 @@ public class NexmarkSourceFunction<T>
 	}
 
 	private GeneratorConfig getSubGeneratorConfig() {
-		int parallelism = getRuntimeContext().getNumberOfParallelSubtasks();
-		int taskId = getRuntimeContext().getIndexOfThisSubtask();
+		int parallelism = getRuntimeContext().getTaskInfo().getNumberOfParallelSubtasks();
+		int taskId = getRuntimeContext().getTaskInfo().getIndexOfThisSubtask();
 		return config.split(parallelism).get(taskId);
 	}
 

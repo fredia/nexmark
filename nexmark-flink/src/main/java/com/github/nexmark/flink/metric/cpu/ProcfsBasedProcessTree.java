@@ -1122,7 +1122,7 @@ public class ProcfsBasedProcessTree {
 		try {
 			in.readLine();
 			in.readLine();
-			in.readLine();
+			// in.readLine();
 			String str = in.readLine(); // use third line
 			// LOG.info(str.trim().split("\\s+").length + " " + str);
 			long ticks = Long.parseLong(str.trim().split("\\s+")[12]);
